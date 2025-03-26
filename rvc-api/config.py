@@ -4,7 +4,8 @@ import torch
 from multiprocessing import cpu_count
 
 
-class Config:
+
+class RVConfig:
     def __init__(self):
         self.device = "cuda:0"
         self.is_half = True
@@ -113,3 +114,17 @@ class Config:
             x_max = 32
 
         return x_pad, x_query, x_center, x_max
+
+
+config = RVConfig()
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+class BaseConfig(BaseSettings):
+    rvc_api: str
+    host: str
+    port: int
+
+    model_config = SettingsConfigDict(env_file='edge-tts-api/.env', env_file_encoding='utf-8')
+
+cssonfig = BaseConfig()
