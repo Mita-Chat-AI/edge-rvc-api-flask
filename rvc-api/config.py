@@ -116,7 +116,7 @@ class RVConfig:
         return x_pad, x_query, x_center, x_max
 
 
-config = RVConfig()
+rvconfig = RVConfig()
 
 class BaseConfig(BaseSettings):
     rvc_api: str
@@ -126,4 +126,4 @@ class BaseConfig(BaseSettings):
     model_config = SettingsConfigDict(env_file='edge-tts-api/.env', env_file_encoding='utf-8')
 
 
-cssonfig = BaseConfig()
+baseconfig = BaseConfig()
