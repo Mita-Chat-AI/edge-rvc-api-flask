@@ -2,7 +2,7 @@ import argparse
 import sys
 import torch
 from multiprocessing import cpu_count
-
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class RVConfig:
@@ -118,13 +118,12 @@ class RVConfig:
 
 config = RVConfig()
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
 class BaseConfig(BaseSettings):
     rvc_api: str
     host: str
     port: int
 
     model_config = SettingsConfigDict(env_file='edge-tts-api/.env', env_file_encoding='utf-8')
+
 
 cssonfig = BaseConfig()
