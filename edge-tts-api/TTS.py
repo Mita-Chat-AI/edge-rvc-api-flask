@@ -55,11 +55,10 @@ class TTS:
             audio_bytes = wav_buffer.read()
             audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
 
-
             payload = {
-                "model_name": person,
-                "f0_up_key": pith,
-                "audio_data": audio_base64
+                "person": person,
+                "pith": pith,
+                "audio": audio_base64
             }
 
             headers = {'Content-type': 'application/json'}
