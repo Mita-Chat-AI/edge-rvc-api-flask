@@ -18,7 +18,6 @@ class TTS:
         text: str,
         rate: str
     ) -> BytesIO:
-        mp3_buffer = BytesIO()
         try:
             communicate = edge_tts.Communicate(text=text, rate=rate)
             audio_data = BytesIO()
@@ -27,10 +26,6 @@ class TTS:
                 if chunk["type"] == "audio":
                     audio_data.write(chunk["data"])
             audio_data.seek(0)
-
-            # audio = AudioSegment.from_file(audio_data, format="mp3")
-            # audio.export(mp3_buffer, format="mp3")
-            # mp3_buffer.seek(0)
 
             return audio_data
         except Exception as e:
@@ -48,8 +43,6 @@ class TTS:
             wav_buffer = TTS.edge(text, rate)
             if not wav_buffer:
                 return None
-            
-            #return wav_buffer
 
             wav_buffer.seek(0)
             audio_bytes = wav_buffer.read()
@@ -69,9 +62,9 @@ class TTS:
 
 
             )
-            response.raise_for_status() # Важно!  Поднимает исключение для не-200 кодов
+            response.raise_for_status()
 
-            return response.content # Возвращаем байты
+            return response.content
 
         except requests.exceptions.RequestException as e:
             logger.error(f"RVC-API ERROR: {e}")
