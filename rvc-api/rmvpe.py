@@ -411,22 +411,22 @@ class RMVPE:
         return devided
 
 
+# import librosa
+# import soundfile as sf
+
 # if __name__ == '__main__':
-#     audio, sampling_rate = sf.read("卢本伟语录~1.wav")
+#     audio, sampling_rate = sf.read("/home/miku/Документы/voices-api/out.mp3")
 #     if len(audio.shape) > 1:
 #         audio = librosa.to_mono(audio.transpose(1, 0))
 #     audio_bak = audio.copy()
 #     if sampling_rate != 16000:
 #         audio = librosa.resample(audio, orig_sr=sampling_rate, target_sr=16000)
-#     model_path = "/bili-coeus/jupyter/jupyterhub-liujing04/vits_ch/test-RMVPE/weights/rmvpe_llc_half.pt"
+#     model_path = "/home/miku/Документы/voices-api/rmvpe.pt"
 #     thred = 0.03  # 0.01
 #     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #     rmvpe = RMVPE(model_path,is_half=False, device=device)
 #     t0=ttime()
 #     f0 = rmvpe.infer_from_audio(audio, thred=thred)
-#     f0 = rmvpe.infer_from_audio(audio, thred=thred)
-#     f0 = rmvpe.infer_from_audio(audio, thred=thred)
-#     f0 = rmvpe.infer_from_audio(audio, thred=thred)
-#     f0 = rmvpe.infer_from_audio(audio, thred=thred)
+
 #     t1=ttime()
 #     print(f0.shape,t1-t0)
