@@ -1,10 +1,15 @@
-import numpy as np, parselmouth, torch, pdb, sys, os
+import numpy as np, torch, sys, os
 from time import time as ttime
 import torch.nn.functional as F
 import scipy.signal as signal
 import pyworld, os, traceback, faiss, librosa, torchcrepe
+
 from scipy import signal
+from loguru import logger
 from functools import lru_cache
+
+from .utils import model_rmvpe
+
 
 now_dir = os.getcwd()
 sys.path.append(now_dir)
@@ -13,33 +18,6 @@ bh, ah = signal.butter(N=5, Wn=48, btype="high", fs=16000)
 
 input_audio_path2wav = {}
 
-
-
-
-from .rmvpe import RMVPE
-
-from loguru import logger
-from .config import config
-
-
-
-model_root = "weights"
-
-logger.info("Loading rmvpe model...")
-try:
-    
-    model_rmvpe = RMVPE("rmvpe.pt", is_half=config.is_half, device=config.device)
-    logger.success("rmvpe model loaded.")
-except Exception as e:
-    logger.error(f"Failed to load rmvpe model: {e}")
-    model_rmvpe = None  # Обрабатываем случай, когда загрузка не удалась
-
-from .lib.infer_pack.models import (
-    SynthesizerTrnMs256NSFsid,
-    SynthesizerTrnMs256NSFsid_nono,
-    SynthesizerTrnMs768NSFsid,
-    SynthesizerTrnMs768NSFsid_nono,
-)
 
 
 
@@ -109,59 +87,15 @@ class VC(object):
         inp_f0=None,
     ):
         global input_audio_path2wav
-        time_step = self.window / self.sr * 1000
         f0_min = 50
         f0_max = 1100
         f0_mel_min = 1127 * np.log(1 + f0_min / 700)
         f0_mel_max = 1127 * np.log(1 + f0_max / 700)
-        if f0_method == "pm":
-            f0 = (
-                parselmouth.Sound(x, self.sr)
-                .to_pitch_ac(
-                    time_step=time_step / 1000,
-                    voicing_threshold=0.6,
-                    pitch_floor=f0_min,
-                    pitch_ceiling=f0_max,
-                )
-                .selected_array["frequency"]
-            )
-            pad_size = (p_len - len(f0) + 1) // 2
-            if pad_size > 0 or p_len - len(f0) - pad_size > 0:
-                f0 = np.pad(
-                    f0, [[pad_size, p_len - len(f0) - pad_size]], mode="constant"
-                )
-        elif f0_method == "harvest":
-            input_audio_path2wav[input_audio_path] = x.astype(np.double)
-            f0 = cache_harvest_f0(input_audio_path, self.sr, f0_max, f0_min, 10)
-            if filter_radius > 2:
-                f0 = signal.medfilt(f0, 3)
-        elif f0_method == "crepe":
-            model = "full"
-            # Pick a batch size that doesn't cause memory errors on your gpu
-            batch_size = 512
-            # Compute pitch using first gpu
-            audio = torch.tensor(np.copy(x))[None].float()
-            f0, pd = torchcrepe.predict(
-                audio,
-                self.sr,
-                self.window,
-                f0_min,
-                f0_max,
-                model,
-                batch_size=batch_size,
-                device=self.device,
-                return_periodicity=True,
-            )
-            pd = torchcrepe.filter.median(pd, 3)
-            f0 = torchcrepe.filter.mean(f0, 3)
-            f0[pd < 0.1] = 0
-            f0 = f0[0].cpu().numpy()
-        elif f0_method == "rmvpe":
-            # Проверяем, загружена ли model_rmvpe
-            if model_rmvpe is None:
-                raise ValueError("rmvpe model не загружена")
-            # Используем глобально загруженную model_rmvpe
-            f0 = model_rmvpe.infer_from_audio(x, thred=0.03)
+
+        if model_rmvpe is None:
+            raise ValueError("rmvpe model не загружена")
+        # Используем глобально загруженную model_rmvpe
+        f0 = model_rmvpe.infer_from_audio(x, thred=0.03)
         f0 *= pow(2, f0_up_key / 12)
         # with open("test.txt","w")as f:f.write("\n".join([str(i)for i in f0.tolist()]))
         tf0 = self.sr // self.window  # 每秒f0点数
