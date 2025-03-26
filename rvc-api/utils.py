@@ -4,15 +4,16 @@ from functools import lru_cache
 import torch
 from  loguru import logger
 from fairseq import checkpoint_utils
+from pydantic import BaseModel, Field
 
-from  .config import config
+from .rmvpe import RMVPE
+from  .config import rvconfig as config
 from .lib.infer_pack.models import (
     SynthesizerTrnMs256NSFsid,
     SynthesizerTrnMs256NSFsid_nono,
     SynthesizerTrnMs768NSFsid,
     SynthesizerTrnMs768NSFsid_nono,
 )
-from .vc_infer_pipeline import VC
 
 
 model_root = "weights"
@@ -22,6 +23,11 @@ models = [
 if not models:
     raise ValueError("No model found in `weights` folder")
 models.sort()
+
+class Data(BaseModel):
+    person: str = Field(required=True, min_length=1, max_length=50, description="Персонаж")
+    pith: int = Field(required=True, ge=-10, le=+15, description="Высота тона")
+    audio: bytes = Field(required=True, description="поток байтов")
 
 
 @lru_cache()
@@ -65,6 +71,8 @@ def load_model(model_name):
     print("Model loaded")
     net_g.eval().to(config.device)
     net_g = net_g.half() if config.is_half else net_g.float()
+    
+    from .vc_infer_pipeline import VC
 
     vc = VC(tgt_sr, config)
 
@@ -80,6 +88,7 @@ def load_model(model_name):
 
 
 def load_hubert():
+    logger.info("Loading hubert model...")
     global hubert_model
     models, _, _ = checkpoint_utils.load_model_ensemble_and_task(
         ["hubert_base.pt"],
@@ -88,17 +97,25 @@ def load_hubert():
     hubert_model = models[0]
     hubert_model = hubert_model.to(config.device)
     hubert_model = hubert_model.half() if config.is_half else hubert_model.float()
+    logger.success("Hubert model loaded.")
     return hubert_model.eval()
 
 
-logger.info("Loading hubert model...")
+def load_rvmpe():
+    global model_rmvpe
+    model_rmvpe = None
+    logger.info("Loading rmvpe model...")
+    try:
+        
+        model_rmvpe = RMVPE("rmvpe.pt", is_half=config.is_half, device=config.device)
+        logger.success("rmvpe model loaded.")
+        return model_rmvpe
+    except Exception as e:
+        logger.error(f"Failed to load rmvpe model: {e}")
+        model_rmvpe = None  # Обрабатываем случай, когда загрузка не удалась
+
+model_rmvpe = load_rvmpe()
 hubert_model = load_hubert()
-logger.success("Hubert model loaded.")
 
 
-from pydantic import BaseModel, Field
 
-class Data(BaseModel):
-    person: str = Field(required=True, min_length=1, max_length=50, description="Персонаж")
-    pith: int = Field(required=True, ge=-10, le=+15, description="Высота тона")
-    audio: bytes = Field(required=True, description="поток байтов")
