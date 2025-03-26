@@ -19,9 +19,9 @@ input_audio_path2wav = {}
 from .rmvpe import RMVPE
 
 from loguru import logger
-from .config import Config
+from .config import config
 
-config = Config()
+
 
 model_root = "weights"
 
