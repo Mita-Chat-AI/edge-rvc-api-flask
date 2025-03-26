@@ -109,14 +109,7 @@ class RVCAPI(Resource):
 
             model_name = data.person
             f0_up_key = data.pith
-            
-            
-            f0_method = data.get('f0_method', 'rmvpe')
-            index_rate = float(0.75)
-            filter_radius = int(data.get('filter_radius', 5))
-            resample_sr = int(data.get('resample_sr', 0))
-            rms_mix_rate = float(data.get('rms_mix_rate', 0.4))
-            protect = float(data.get('protect', 0.7))
+
 
         except KeyError as e:
             return {"error": f"Missing parameter: {e}"}, 400
@@ -133,12 +126,12 @@ class RVCAPI(Resource):
                 model_name,
                 audio_stream,
                 f0_up_key,
-                f0_method,
-                index_rate,
-                filter_radius,
-                resample_sr,
-                rms_mix_rate,
-                protect,
+                "rvmpe",
+                0.75,
+                0,
+                5,
+                0.4,
+                0.7,
             )
 
             st = time.time()
