@@ -1,47 +1,56 @@
-import io
-import sounddevice as sd
-import soundfile as sf
-from vosk_tts import Model, Synth
+from loguru import logger
+from flask_restx import Api, Resource
+from flask import Flask, request, Response
 
-# Загружаем модель один раз при старте
-print("Загрузка модели...")
-model = Model(model_name="vosk-model-tts-ru-0.8-multi")
-synth = Synth(model)
-print("Модель загружена.")
+from .config import config
+from .TTS import TTS
+from .utils import Data
 
-# Функция синтеза
-def speak(text, speaker_id=2):
-    wav_bytes = synth.synth_bytes(text=text, speaker_id=speaker_id)
-    return wav_bytes
 
-# Пример использования
-if __name__ == "__main__":
-    speaker = 1  # сохраняем между итерациями
-    while True:
+app = Flask(__name__)
+
+api = Api(app, version='1.0', title='TTS API', description='TTS API')
+ns = api.namespace('api/v1/vosk', description='TTS-vosk operations')
+
+
+@ns.route("/get_vosk")
+class GetEdge(Resource):
+    @ns.expect(Data, validate=True)
+    def post(self):
         try:
-            text = input(f"\n[Текущий спикер: {speaker}] Введите текст (или 'exit' / 'speaker'): ")
+            json_data = request.get_json()
+            data = Data(**json_data)
+            person = data.person
+            text = data.text
+            speaker_id = data.speaker_id
+            speech_rate = data.speech_rate
+            duration_noise_level = data.duration_noise_level
+            scale = data.scale
+            pith = data.pith
 
-            if text.lower() == 'exit':
-                break
 
-            if text.lower() == 'speaker':
-                text_speaker = input("Введите ID спикера (целое число): ")
-                try:
-                    speaker = int(text_speaker)
-                    print(f"Спикер установлен на {speaker}")
-                except ValueError:
-                    print("Ошибка: ID спикера должен быть целым числом.")
-                continue
 
-            # Синтез речи
-            wav_bytes = speak(text, speaker)
-            buffer = io.BytesIO(wav_bytes)
-            data, samplerate = sf.read(buffer, dtype='int16')
 
-            # Воспроизводим через sounddevice
-            sd.play(data, samplerate)
-            sd.wait()
 
-            print("Синтез завершён.")
+            audio_data = TTS.rvc(
+                person,
+                text,
+                speaker_id,
+                speech_rate,
+                duration_noise_level,
+                scale,
+                pith
+            )
+
+            if audio_data:
+                return Response(audio_data, mimetype="audio/mpeg")
+            else:
+                return {"error": "Ошибка при преобразовании аудио"}, 500
+
         except Exception as e:
-            print("Ошибка:", e)
+            logger.error(f"GET-VOSK ERROR: {e}")
+            return {"error": str(e)}, 500
+
+
+if __name__ == "__main__":
+    app.run(host=config.host, port=config.port, debug=False)
