@@ -87,22 +87,57 @@ def load_model(model_name):
     return tgt_sr, net_g, vc, version, index_file, if_f0
 
 
+import os
+import requests
+
+HUBERT_URL = "https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/hubert_base.pt"
+RMVPE_URL = "https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/rmvpe.pt"
+
+def download_model_if_missing(filename: str, url: str):
+    if not os.path.exists(filename):
+        print(f"Файл '{filename}' не найден. Скачиваем с {url} ...")
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        with open(filename, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        print(f"Скачивание '{filename}' завершено.")
+    else:
+        print(f"Файл '{filename}' уже существует.")
+
+def download_hubert_and_rmvpe():
+    download_model_if_missing("hubert_base.pt", HUBERT_URL)
+    download_model_if_missing("rmvpe.pt", RMVPE_URL)
+
+
+
 def load_hubert():
-    logger.info("Loading hubert model...")
     global hubert_model
+
+    if not os.path.exists("hubert_base.pt"):
+        download_hubert_and_rmvpe()
+
+    print("Загружаем модель Hubert...")
+
     models, _, _ = checkpoint_utils.load_model_ensemble_and_task(
-        ["hubert_base.pt"],
+        ['hubert_base.pt'],
         suffix="",
     )
+
     hubert_model = models[0]
     hubert_model = hubert_model.to(config.device)
     hubert_model = hubert_model.half() if config.is_half else hubert_model.float()
-    logger.success("Hubert model loaded.")
-    return hubert_model.eval()
+    hubert_model.eval()
 
+    print("Hubert модель успешно загружена.")
+    return hubert_model
 
 def load_rvmpe():
     global model_rmvpe
+
+    if not os.path.exists("rmvpe.pt"):
+        download_hubert_and_rmvpe()
+
     model_rmvpe = None
     logger.info("Loading rmvpe model...")
     try:
@@ -112,7 +147,7 @@ def load_rvmpe():
         return model_rmvpe
     except Exception as e:
         logger.error(f"Failed to load rmvpe model: {e}")
-        model_rmvpe = None  # Обрабатываем случай, когда загрузка не удалась
+        exit()
 
 model_rmvpe = load_rvmpe()
 hubert_model = load_hubert()
