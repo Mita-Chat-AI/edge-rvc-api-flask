@@ -4,7 +4,6 @@ import requests
 from io import BytesIO
 
 from loguru import logger
-from pydub import AudioSegment
 import edge_tts
 
 from .config import config
